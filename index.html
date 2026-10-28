@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Parin Gupta, AI engineer in the making: agentic LLM products, open source at Hugging Face, launch films and FPGA work on one 3D workbench.">
+<meta property="og:title" content="Parin's Workbench">
+<meta property="og:description" content="Motion films, apps, open source and FPGA work on one 3D electronics bench.">
+<meta property="og:image" content="assets/og.jpg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230B0D0C'/%3E%3Cpath d='M4 20 C10 20 11 8 16 8 S22 20 28 20' stroke='%237CF5B2' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+<title>Parin's Workbench</title>
+<style>*{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@50..150,400..900&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-bleed 3D night workbench; HUD floats in the corners; a side sheet (bottom sheet on phones) opens for each object. Single deliberate dark look: the bench is lit by one lamp. */
+:root{
+  --night:#0B0D0C; --sheet:#151816; --paper:#EFE8DA; --dim:#A49D8E; --line:#2B302D;
+  --amber:#FFB54A; --phosphor:#7CF5B2; --copper:#D9844A;
+  --display:"Anybody", "Arial Narrow", system-ui, sans-serif;
+  --body:"Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--night);color:var(--paper);font-family:var(--body);overflow:hidden;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));}
+#stage{position:fixed;inset:0;display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
+#stage.drag{cursor:grabbing}
+#stage.hot{cursor:pointer}
+.hud{position:fixed;z-index:5;pointer-events:none}
+.hud *{pointer-events:auto}
+.hud.tl{text-shadow:0 2px 14px rgba(0,0,0,.75)}
+.hud.tl{top:calc(18px + env(safe-area-inset-top,0px));left:max(18px, env(safe-area-inset-left,0px))}
+.hud.tr{top:calc(18px + env(safe-area-inset-top,0px));right:max(18px, env(safe-area-inset-right,0px));display:flex;gap:10px}
+.hud.bc{bottom:calc(18px + env(safe-area-inset-bottom,0px));left:0;right:0;text-align:center;padding-inline:max(16px, env(safe-area-inset-left,0px))}
+h1{margin:0;font-family:var(--display);font-weight:800;font-stretch:72%;font-size:clamp(30px,4.4vw,56px);line-height:.95;letter-spacing:-0.01em}
+.count{font-family:var(--mono);font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-top:8px;display:flex;gap:10px;align-items:center}
+.count b{color:var(--phosphor);font-weight:500}
+.meter{width:110px;height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--phosphor);transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.pillbtn{font:500 13px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--paper);background:rgba(21,24,22,.72);
+  border:1px solid #3A403C;border-radius:999px;padding:11px 18px;cursor:pointer;backdrop-filter:blur(6px)}
+.pillbtn:hover{border-color:var(--amber);color:var(--amber)}
+.pillbtn:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
+.hint{font-size:15px;color:var(--dim);display:inline-block;background:rgba(11,13,12,.55);padding:6px 12px;border-radius:8px}
+#tip{position:fixed;z-index:6;pointer-events:none;font:500 12.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  background:var(--paper);color:var(--night);padding:6px 10px;border-radius:6px;transform:translate(14px,14px);opacity:0;transition:opacity .15s}
+
+/* sheet */
+.sheet{position:fixed;z-index:8;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--sheet);border-left:1px solid var(--line);
+  transform:translateX(104%);transition:transform .55s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.sheet.open{transform:none}
+.sheet header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line)}
+.sheet .kind{font:500 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+.close{background:none;border:1px solid var(--line);color:var(--paper);border-radius:999px;width:40px;height:40px;font-size:18px;cursor:pointer;flex:none}
+.close:hover{border-color:var(--amber)}
+.sheet .body{overflow-y:auto;padding:24px 22px 40px;display:flex;flex-direction:column;gap:20px;min-height:0}
+.sheet h2{margin:0;font-family:var(--display);font-weight:800;font-stretch:80%;font-size:clamp(40px,7vw,64px);line-height:.92;letter-spacing:-0.01em;text-wrap:balance}
+.sheet p{margin:0;line-height:1.6;color:#D7D0C2;max-width:60ch}
+.status{display:inline-flex;align-items:center;gap:8px;font:500 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:5px 12px;width:fit-content}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--phosphor);box-shadow:0 0 8px var(--phosphor)}
+.status.wip i{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.status.ask i{background:var(--copper);box-shadow:none}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags span{font:400 12.5px var(--mono);border:1px solid var(--line);border-radius:6px;padding:3px 8px;color:var(--dim)}
+.facts{display:grid;gap:0;margin:0}
+.facts div{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.facts dt{font:500 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.facts dd{margin:0}
+.links{display:flex;flex-wrap:wrap;gap:10px}
+.btn{font:600 15px var(--body);border-radius:999px;padding:11px 18px;border:1px solid var(--paper);background:var(--paper);color:var(--night);cursor:pointer;text-decoration:none;display:inline-block}
+.btn.ghost{background:transparent;color:var(--paper)}
+.btn:hover{background:var(--amber);border-color:var(--amber);color:var(--night)}
+.eyebrowish{font:500 12px var(--mono)!important;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)!important;margin-top:6px!important}
+.film{display:grid;gap:8px}
+.film video{width:100%;aspect-ratio:16/9;max-width:100%;background:#000;border-radius:10px;display:block}
+.film h3{margin:4px 0 0;font-family:var(--display);font-weight:700;font-stretch:85%;font-size:28px}
+.film .mono{font:400 12.5px var(--mono);color:var(--dim);letter-spacing:.06em}
+.email{font-family:var(--display);font-weight:700;font-stretch:90%;font-size:clamp(22px,4vw,30px);user-select:all;word-break:break-all}
+
+/* menu */
+.menu{position:fixed;z-index:9;inset:0;background:rgba(11,13,12,.94);backdrop-filter:blur(8px);display:none;overflow-y:auto;
+  padding:calc(24px + env(safe-area-inset-top,0px)) max(20px, env(safe-area-inset-right,0px)) 40px max(20px, env(safe-area-inset-left,0px))}
+.menu.open{display:block}
+.menu-in{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+.menu-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px}
+.group h3{margin:0 0 8px;font:500 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+.group button{all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;gap:12px;width:100%;box-sizing:border-box;padding:10px 0;border-bottom:1px solid var(--line);
+  font-family:var(--display);font-weight:700;font-stretch:85%;font-size:28px}
+.group button:hover{color:var(--amber)}
+.group button:focus-visible{outline:2px solid var(--amber)}
+.group button small{font:400 12px var(--mono);color:var(--dim);letter-spacing:.08em}
+.group button.found small{color:var(--phosphor)}
+
+.boot{position:fixed;inset:0;z-index:20;background:var(--night);display:grid;place-items:center;transition:opacity .6s}
+.boot.gone{opacity:0;pointer-events:none}
+.boot span{font:500 13px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--phosphor)}
+.fallback{position:fixed;inset:0;display:none;place-items:center;text-align:center;padding:24px}
+@media (max-width:640px){
+  .sheet{top:auto;left:0;width:100%;height:78%;border-left:0;border-top:1px solid var(--line);border-radius:18px 18px 0 0;transform:translateY(104%);padding-left:env(safe-area-inset-left,0px)}
+  .hud.tr{flex-direction:column;align-items:flex-end}
+  .pillbtn{padding:9px 14px}
+  .hint{font-size:13.5px}
+}
+@media (prefers-reduced-motion: reduce){.sheet{transition:none}.meter i{transition:none}}
+</style>
+
+</head><body>
+<canvas id="stage" tabindex="0" aria-label="3D workbench. Use the Menu button for a list of everything on the bench."></canvas>
+<div class="hud tl">
+  <h1>Parin's<br>workbench</h1>
+  <div class="count" style="margin-top:6px;letter-spacing:.08em">AI engineer · builder · motion</div>
+  <div class="count"><span><b id="foundN">0</b> of <span id="totalN">15</span> found</span><span class="meter" aria-hidden="true"><i id="meterBar"></i></span></div>
+</div>
+<div class="hud tr">
+  <button class="pillbtn" id="hintBtn" type="button">Hints</button>
+  <button class="pillbtn" id="menuBtn" type="button">Menu</button>
+</div>
+<div class="hud bc"><span class="hint" id="hintLine">Drag to look around. Tap anything on the bench.</span></div>
+<div id="tip"></div>
+
+<aside class="sheet" id="sheet" aria-hidden="true" aria-labelledby="sheetTitle">
+  <header><span class="kind" id="sheetKind"></span><button class="close" id="closeBtn" type="button" aria-label="Close">✕</button></header>
+  <div class="body" id="sheetBody"></div>
+</aside>
+
+<div class="menu" id="menu" role="dialog" aria-modal="true" aria-label="Everything on the bench">
+  <div class="menu-in">
+    <div class="menu-top"><span class="count" style="margin:0">The quick way through</span><button class="close" id="menuClose" type="button" aria-label="Close menu">✕</button></div>
+    <div class="groups" id="groups"></div>
+  </div>
+</div>
+<div class="boot" id="boot"><span>Powering up the bench</span></div>
+<div class="fallback" id="fallback"><p>This browser can't draw the 3D bench. Open the Menu to see everything.</p></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const ASSET={resume:"assets/Parin_Gupta_Resume.pdf",ondo:"assets/ondo.mp4",ondoPoster:"assets/ondo-poster.jpg",tl:"assets/tastelaunch.mp4",tlPoster:"assets/tastelaunch-poster.jpg",du:"assets/duely.mp4",duPoster:"assets/duely-poster.jpg"};
+const EMAIL="paringupta17@gmail.com";
+
+// ---------- content ----------
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const link=(href,label,ghost)=>`<a class="btn${ghost?' ghost':''}" href="${href}" target="_blank" rel="noopener">${esc(label)} ↗</a>`;
+const status=(t,cls)=>`<span class="status ${cls||''}"><i></i>${esc(t)}</span>`;
+const tags=a=>`<div class="tags">${a.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`;
+const facts=rows=>`<dl class="facts">${rows.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
+function app(o){return{kind:o.kind||'App · on the breadboard',group:'Apps',title:o.title,label:o.title,
+  html:`<h2 id="sheetTitle">${esc(o.title)}</h2>${status(o.status,o.sc)}<p>${o.text}</p>${tags(o.stack)}${o.facts?facts(o.facts):''}<div class="links">${(o.links||[]).map((l,i)=>link(l[0],l[1],i>0)).join('')}</div>`}}
+const ITEMS={
+ scope:{kind:'Motion · the oscilloscope',group:'Motion',title:'Motion films',label:'Motion films',html:`
+  <h2 id="sheetTitle">Motion films</h2>
+  <p>Launch films for products, timed to music and built around one idea each. The scope on the bench is playing the first one.</p>
+  <div class="film"><video src="${ASSET.ondo}" poster="${ASSET.ondoPoster}" controls playsinline preload="none"></video><h3>ondo</h3><span class="mono">Concept product film · 0:30 · 1080p60 · 120 BPM</span><p>A launch film for ondo, a fictional music app. One coral disc carries every transition: logo, play button, mood picker, the drop, a shared session, an EQ handle, and finally the "o" in the wordmark.</p></div>
+  <div class="film"><video src="${ASSET.tl}" poster="${ASSET.tlPoster}" controls playsinline preload="none"></video><h3>TasteLaunch</h3><span class="mono">Launch film · 0:24 · Qloo hackathon 2026</span><p>From one typed idea to a named café with its own palette and storefront, then a side-by-side showing how much better the picks get with Qloo's taste data.</p></div>
+  <div class="film"><video src="${ASSET.du}" poster="${ASSET.duPoster}" controls playsinline preload="none"></video><h3>Duely</h3><span class="mono">Promo film · 0:30 · Galuxium Nexus V2 2026</span><p>Opens on the late-payment problem and follows one invoice from drafting through friendly, firm and final reminders to a one-link payment.</p></div>`},
+ c_studylix:app({title:'Studylix',status:'Live · testing',text:'A study operating system that puts timetable, tasks, exams, a focus timer and notes in one place, with each subject linking everything together. It has two-way Google Calendar sync, background jobs, file storage, and separate dev and prod databases.',stack:['Next.js','TypeScript','PostgreSQL','Inngest','Google OAuth','Backblaze B2'],links:[['https://studylix.vercel.app','Open Studylix']]}),
+ c_campus:app({title:'CampusLoop',status:'Demo on request',sc:'ask',text:'A mini-metro network for college campuses. Shuttles run on fixed, scheduled loops you can watch live; enter your hostel block and your 8:50 class and it picks the exact slot to catch; book a seat the night before and board with a digital pass. Fleet control handles delays and route changes live.',stack:['Next.js','Tailwind CSS','Leaflet.js'],links:[['https://www.linkedin.com/in/guptaparin/','Ask for a demo']]}),
+ c_duely:app({title:'Duely',status:'Live',text:'Describe the work in one sentence and Duely turns it into a proper GST invoice with its own payment link. Clients pay by UPI, card or net banking through Razorpay. If they don\'t, the AI writes the follow-up, getting firmer the later the payment is: friendly, then firm, then final.',stack:['Next.js','Supabase (row-level security)','Razorpay orders + webhooks','Groq'],facts:[['Payments','Signature verification and webhooks, so an invoice is marked paid exactly once'],['AI','Every drafted output is schema-checked'],['Event','Galuxium Nexus V2 · solo entry'],['Film','Launch film directed and produced by me']],links:[['https://duely-one.vercel.app','Open Duely']]}),
+ c_taste:app({title:'TasteLaunch',status:'Live',text:'An AI co-founder that designs a local business around what people nearby actually like, grounded in Qloo\'s taste graph.',stack:['Agentic AI','Qloo API','Next.js'],facts:[['Event','Qloo hackathon 2026']],links:[['https://tastelaunch.vercel.app','Open TasteLaunch']]}),
+ c_attend:app({title:'AttendGuard',status:'Live',text:'Tells you whether you can skip the next class or need to show up, based on your attendance and your college\'s minimum.',stack:['JavaScript','GitHub Pages'],facts:[['Event','Build With AI: Basics (Devpost)']],links:[['https://guptaparin.github.io/attendguard','Open AttendGuard'],['https://github.com/guptaparin/attendguard','Code']]}),
+ c_pactly:app({title:'Pactly',status:'In progress',sc:'wip',text:'An agent that turns a deal made over chat into structured terms, holds the money with PayPal authorize and capture, and releases it only after both sides confirm delivery.',stack:['AI agents','PayPal Orders API'],facts:[['Event','PayPal AI Hackathon · solo']],links:[['https://github.com/guptaparin/pactly','Code']]}),
+ c_volt:app({title:'VoltProof',status:'In progress',sc:'wip',text:'Hourly certificates for solar energy, so a kilowatt-hour can be traced to the hour it was generated.',stack:['Blockchain','Energy data'],facts:[['Event','IEEE ClimateChain Global Hackathon 2026 · solo']],links:[['https://github.com/guptaparin/voltproof','Code']]}),
+c_rtos:app({title:'RTStudio',status:'Live',text:'An interactive real-time scheduler simulator that shows how a car or a medical device decides what runs next. It runs preemptive Rate-Monotonic and Earliest-Deadline-First scheduling, draws the result as a Gantt chart, and simulates priority inversion with mutexes, the Priority Inheritance Protocol and interrupt-driven preemption.',stack:['JavaScript','Operating systems','RTOS scheduling'],facts:[['Full name','Computer Traffic Controller']],links:[['https://computer-traffic-controller.vercel.app/','Open RTStudio'],['https://github.com/guptaparin/Computer-Traffic-Controller','Code']]}),
+c_aegis:app({title:'Aegis',status:'Built',text:'A Layer 7 web application firewall and reverse proxy built from scratch on Python\'s raw sockets, with no Flask, Express or HTTP library. It parses raw HTTP bytes by hand, checks requests for injection in context, and when it catches an attack such as XSS it cuts the connection and answers 403 before the backend ever sees it.',stack:['Python sockets','HTTP parsing','Web security']}),
+ c_flow:app({title:'FlowDesk',status:'In progress',sc:'wip',text:'A private academic dashboard. You create your own subjects, each with files, to-dos and notes, and everything rolls up into one calendar and one to-do list.',stack:['Next.js','Tailwind','Framer Motion']}),
+ fpga:{kind:'Hardware · the FPGA board',group:'Experience',title:'FPGA internship',label:'FPGA internship',html:`
+  <h2 id="sheetTitle">FPGA internship</h2>${status('5G Use Case Lab · BITS Pilani','ask')}
+  <p>Summer research intern under Prof. Sandeep Joshi, EEE Department, June to July 2026. My project was FPGA prototyping using Verilog HDL. I designed and simulated combinational and sequential logic in Verilog and deployed it to an FPGA with Xilinx Vivado.</p>
+  ${facts([['Role','Hardware Engineering Intern'],['When','June – July 2026 · Pilani'],['Tested','D flip-flops and adders against 50+ test vectors, confirming synchronous reset'],['Wired','XDC constraint files mapping logic I/O to the board\'s switches and LEDs'],['Tools','Verilog HDL, Xilinx Vivado']])}
+  <p>The LEDs on this board are counting in binary, the same way mine did in the lab.</p>`},
+ notebook:{kind:'About · the sketchbook',group:'About',title:'About me',label:'About me',html:`
+  <h2 id="sheetTitle">AI engineer in the making.</h2>
+  <p>I build agentic, LLM-powered products and ship them end to end.</p>
+  <p>I'm a second-year Computer Engineering student at Thapar Institute of Engineering &amp; Technology (CGPA 9.72), working at the intersection of applied AI, full-stack software, and the hardware it runs on.</p>
+  <p class="eyebrowish">What I'm building right now</p>
+  ${facts([['Open source','Contributor to huggingface_hub. My fix for a missing top-level export (PR #5140) was merged into main, and I\'m working through more issues, including a fix in the MCP client.'],
+    ['Duely','An AI invoice chaser for freelancers and agencies that automates payment follow-ups, with Razorpay payments built in. Live on Vercel.'],
+    ['Pactly','An AI escrow agent that turns informal chat deals into secure payments using PayPal\'s authorize/capture flow.'],
+    ['Studylix','A study operating system that brings timetables, tasks, exams, a focus timer and notes into one app, with two-way Google Calendar sync. Built with Next.js, TypeScript and Postgres, and onboarding its first users now.'],
+    ['CampusLoop','A fixed-schedule campus e-rickshaw transit system with live tracking, a class-commute matcher, QR boarding passes and a driver/admin panel.']])}
+  ${facts([['Studying','B.E. Computer Engineering, TIET · 2025 – 2029 · CGPA 9.72'],['Campus','Internshala Student Partner, TIET · Fall 2026 cohort'],['Also','I direct and produce the launch films for my products']])}
+  <p>Reach out here, or find my code on GitHub.</p>
+  <div class="links">${link('https://github.com/guptaparin','github.com/guptaparin')}${link('https://www.linkedin.com/in/guptaparin/','LinkedIn',true)}</div>`},
+ meter:{kind:'Skills · the multimeter',group:'About',title:'Skills',label:'Skills',html:`
+  <h2 id="sheetTitle">What I measure up to</h2>
+  ${facts([['Motion','Product films, UI animation, kinetic type, logo animation, cutting to music'],['Languages','Python, C++, C, TypeScript, JavaScript, SQL, Verilog HDL'],['AI','LLM APIs, AI agents, Model Context Protocol, Hugging Face, Amazon Bedrock'],['Web','Next.js, React, Node.js, REST APIs, PostgreSQL, Tailwind CSS, OAuth'],['Tools','Git, Vercel, Neon, Inngest, Linux, Xilinx Vivado'],['Certified','Google AI Professional Certificate (7 courses, Jun 2026) · Amazon Bedrock Customization, Optimization & Automation, AWS (Jul 2026) · AWS Generative AI and AI Agents with Amazon Bedrock']])}`},
+ clipboard:{kind:'Resume · the clipboard',group:'About',title:'Resume',label:'Resume',html:`
+  <h2 id="sheetTitle">Resume</h2>
+  ${facts([['Now','Open source contributor, huggingface_hub · Oct 2026 – present'],['Before','Hardware Engineering Intern, BITS Pilani 5G Systems Lab · Jun – Jul 2026'],['Built','Duely, Pactly, Studylix, RTStudio, CampusLoop, Aegis'],['Studying','B.E. Computer Engineering, Thapar Institute · 2025 – 2029']])}
+  <div class="links" id="resumeLinks"><button class="btn" id="dlResume" type="button">Download resume (PDF)</button>${link(ASSET.resume,'Open in a new tab',true)}</div>
+  <p id="resumeMsg" class="mono" style="color:var(--dim);font-size:13px"></p>`},
+ oss:{kind:'Open source · the laptop',group:'Experience',title:'Hugging Face',label:'Open source',html:`
+  <h2 id="sheetTitle">Open source at Hugging Face</h2>${status('Oct 2026 – present')}
+  <p>I contribute bug fixes and API improvements to huggingface_hub, Hugging Face's official Python client for models, datasets and Spaces on the Hub.</p>
+  ${facts([['Work','Fixes across public API exports and the MCPClient (Model Context Protocol) module'],['Merged','PR #5140: a fix for a missing top-level export, merged into main'],['Next','More issues in progress, including a fix in the MCP client'],['Process','Reproduce the bug, write the fix and tests, pass maintainer review and CI']])}
+  <div class="links">${link('https://github.com/huggingface/huggingface_hub/pull/5140','PR #5140')}${link('https://github.com/huggingface/huggingface_hub','huggingface_hub',true)}${link('https://github.com/guptaparin','My GitHub',true)}</div>`},
+ radio:{kind:'Contact · the radio',group:'Contact',title:'Contact',label:'Contact',html:`
+  <h2 id="sheetTitle">Send a signal</h2>
+  <p>Hiring a motion design or software intern, or want a launch film for your product? Write to me.</p>
+  <span class="email" id="emailTxt">${EMAIL}</span>
+  <div class="links"><button class="btn" id="copyEmail" type="button">Copy email</button>${link('https://www.linkedin.com/in/guptaparin/','LinkedIn',true)}${link('https://github.com/guptaparin','GitHub',true)}</div>`},
+ lamp:{kind:'Easter egg · the lamp',group:'Hidden',title:'Lights',label:'The lamp',html:`
+  <h2 id="sheetTitle">Lights out.</h2><p>You found the switch. Tap the lamp again to bring the light back. Everything that glows on its own keeps glowing.</p>`},
+};
+const ORDER=['scope','c_studylix','c_campus','c_duely','c_taste','c_attend','c_pactly','c_volt','c_flow','c_rtos','c_aegis','oss','fpga','notebook','meter','clipboard','radio','lamp'];
+
+// ---------- found state ----------
+let found=new Set();
+try{found=new Set(JSON.parse(localStorage.getItem('bench-found')||'[]').filter(k=>ITEMS[k]))}catch(e){}
+const totalN=ORDER.length;document.getElementById('totalN').textContent=totalN;
+function saveFound(){try{localStorage.setItem('bench-found',JSON.stringify([...found]))}catch(e){}}
+function renderCount(){document.getElementById('foundN').textContent=found.size;document.getElementById('meterBar').style.width=(found.size/totalN*100)+'%';
+  document.getElementById('hintLine').textContent=found.size>=totalN?'You found everything. Thanks for looking around.':'Drag to look around. Tap anything on the bench.';buildMenu()}
+
+// ---------- sheet + menu ----------
+const sheet=document.getElementById('sheet'),body=document.getElementById('sheetBody');
+let openId=null;
+function openItem(id){
+  const it=ITEMS[id];if(!it)return;openId=id;
+  if(!found.has(id)){found.add(id);saveFound();renderCount()}
+  document.getElementById('sheetKind').textContent=it.kind;body.innerHTML=it.html;body.scrollTop=0;
+  sheet.classList.add('open');document.querySelector('.hud.bc').style.visibility='hidden';sheet.setAttribute('aria-hidden','false');
+  const cb=document.getElementById('copyEmail');
+  if(cb)cb.onclick=()=>{const em=document.getElementById('emailTxt');
+    const ok=()=>{cb.textContent='Copied';setTimeout(()=>cb.textContent='Copy email',1600)};
+    const sel=()=>{const r=document.createRange();r.selectNodeContents(em);const s=getSelection();s.removeAllRanges();s.addRange(r);cb.textContent='Selected, press copy'};
+    try{navigator.clipboard.writeText(EMAIL).then(ok,sel)}catch(e){sel()}};
+  const dl=document.getElementById('dlResume');
+  if(dl)dl.onclick=async()=>{const msg=document.getElementById('resumeMsg');
+    try{
+      const api=window.claude&&window.claude.use?await window.claude.use('downloads'):null;
+      if(api){const data=await (await fetch(ASSET.resume)).blob();await api.save({filename:'Parin_Gupta_Resume.pdf',data});msg.textContent='Saved.';return}
+      const a=document.createElement('a');a.href=ASSET.resume;a.download='Parin_Gupta_Resume.pdf';document.body.appendChild(a);a.click();a.remove();
+    }catch(e){msg.textContent=e&&e.code==='declined'?'Download cancelled.':'Couldn\'t start the download here. Use "Open in a new tab" instead.'}};
+  if(id==='lamp'){try{toggleLamp()}catch(e){}}
+  try{focusOn(id)}catch(e){}
+  setTimeout(()=>document.getElementById('closeBtn').focus({preventScroll:true}),50);
+}
+function closeSheet(){sheet.classList.remove('open');document.querySelector('.hud.bc').style.visibility='';sheet.setAttribute('aria-hidden','true');body.querySelectorAll('video').forEach(v=>v.pause());openId=null;try{focusOn(null)}catch(e){}}
+document.getElementById('closeBtn').onclick=closeSheet;
+addEventListener('keydown',e=>{if(e.key==='Escape'){if(menu.classList.contains('open'))closeMenu();else if(openId)closeSheet()}});
+const menu=document.getElementById('menu');
+function buildMenu(){
+  const g={};ORDER.forEach(id=>{const it=ITEMS[id];(g[it.group]=g[it.group]||[]).push(id)});
+  document.getElementById('groups').innerHTML=Object.entries(g).map(([name,ids])=>`<div class="group"><h3>${esc(name)}</h3>${ids.map(id=>{
+    const f=found.has(id),hidden=ITEMS[id].group==='Hidden'&&!f;
+    return `<button type="button" data-id="${id}" class="${f?'found':''}">${hidden?'Something on the bench':esc(ITEMS[id].label)}<small>${f?'found':'not found'}</small></button>`}).join('')}</div>`).join('');
+  document.querySelectorAll('#groups button').forEach(b=>b.onclick=()=>{closeMenu();openItem(b.dataset.id)});
+}
+function openMenu(){menu.classList.add('open');document.getElementById('menuClose').focus()}
+function closeMenu(){menu.classList.remove('open');document.getElementById('menuBtn').focus({preventScroll:true})}
+document.getElementById('menuBtn').onclick=openMenu;document.getElementById('menuClose').onclick=closeMenu;
+renderCount();
+
+// ---------- 3D ----------
+if(!window.THREE){document.getElementById('fallback').style.display='grid';document.getElementById('boot').classList.add('gone');return}
+const canvas=document.getElementById('stage');
+let renderer;
+try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true})}catch(e){document.getElementById('fallback').style.display='grid';document.getElementById('boot').classList.add('gone');return}
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x0B0D0C);scene.fog=new THREE.Fog(0x0B0D0C,26,48);
+const camera=new THREE.PerspectiveCamera(38,1,0.1,100);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// helpers
+function tex(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');draw(g,w,h);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t}
+const M=(color,o={})=>new THREE.MeshStandardMaterial(Object.assign({color,roughness:.6,metalness:.05},o));
+function box(w,h,d,mat,x=0,y=0,z=0,parent){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;(parent||scene).add(m);return m}
+function cyl(rt,rb,h,mat,x=0,y=0,z=0,parent,seg=24){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;(parent||scene).add(m);return m}
+const clickables=[];const groups={};
+function obj(id,x,y,z,ry=0){const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=ry;g.userData.id=id;scene.add(g);groups[id]=g;return g}
+function hit(g,mesh){mesh.userData.id=g.userData.id;clickables.push(mesh)}
+
+// ---- room ----
+const TOP=0.3;
+const woodTex=tex(1024,512,(g,w,h)=>{g.fillStyle='#5A3A24';g.fillRect(0,0,w,h);let s=7;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+  for(let i=0;i<220;i++){g.strokeStyle=`rgba(${r()<.5?'40,24,14':'120,82,52'},${.12+r()*.18})`;g.lineWidth=1+r()*3;g.beginPath();const y=r()*h;g.moveTo(0,y);
+    for(let x=0;x<=w;x+=64)g.lineTo(x,y+Math.sin(x/90+i)*6*r());g.stroke()}
+  for(let k=1;k<6;k++){g.fillStyle='rgba(20,12,6,.5)';g.fillRect(0,k*h/6,w,2)}});
+woodTex.wrapS=woodTex.wrapT=THREE.RepeatWrapping;
+box(18,0.6,9,M(0xffffff,{map:woodTex,roughness:.75}),0,0,0);
+box(17.4,1.6,.4,M(0x3A2516,{roughness:.8}),0,-1.1,4.1);
+[-5.6,0,5.6].forEach(x=>{box(5.2,1.2,.08,M(0x4A3020,{roughness:.7}),x,-1.1,4.33);box(1.2,.12,.14,M(0xB8B2A4,{metalness:.8,roughness:.3}),x,-1.1,4.42)});
+[-8.5,8.5].forEach(x=>box(.5,9,.5,M(0x2E1D12),x,-4.8,3.8));
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(80,40),M(0x17110C,{roughness:.9}));floor.rotation.x=-Math.PI/2;floor.position.y=-9;floor.receiveShadow=true;scene.add(floor);
+const pegTex=tex(1024,512,(g,w,h)=>{g.fillStyle='#2C2A24';g.fillRect(0,0,w,h);g.fillStyle='#16150F';for(let y=16;y<h;y+=32)for(let x=16;x<w;x+=32){g.beginPath();g.arc(x,y,4.2,0,7);g.fill()}});
+pegTex.wrapS=pegTex.wrapT=THREE.RepeatWrapping;pegTex.repeat.set(2,1);
+const wall=new THREE.Mesh(new THREE.PlaneGeometry(26,13),M(0xffffff,{map:pegTex,roughness:.95}));wall.position.set(0,6.2,-4.5);wall.receiveShadow=true;scene.add(wall);
+// pegboard tools (decor)
+function hangTool(x,y,len,col){const g=new THREE.Group();g.position.set(x,y,-4.35);scene.add(g);cyl(.07,.07,.5,M(0x888888,{metalness:.8,roughness:.3}),0,.2,0,g).rotation.x=Math.PI/2;
+  box(.18,len,.08,M(col,{roughness:.5}),0,-len/2,.05,g);box(.5,.12,.08,M(0x9AA0A6,{metalness:.8,roughness:.35}),0,-len-.02,.05,g)}
+hangTool(-6.5,7.2,1.6,0xC2402E);hangTool(-5.8,7.3,1.9,0x2E5AC2);hangTool(-5.1,7.1,1.4,0xE0A82E);
+// wall poster: storyboard strip (motion cue)
+const posterTex=tex(1024,360,(g,w,h)=>{g.fillStyle='#EFE8DA';g.fillRect(0,0,w,h);g.strokeStyle='#15130F';g.lineWidth=4;
+  for(let i=0;i<4;i++){const x=24+i*250;g.strokeRect(x,40,226,140);g.beginPath();g.arc(x+70+i*30,110,26+i*6,0,7);g.stroke();g.font='500 22px monospace';g.fillStyle='#15130F';g.fillText('0'+(i+1)+'  · 00:0'+(i*2)+':00',x,220)}
+  g.font='800 46px sans-serif';g.fillText('BOARD 03 — "ONE DISC"',24,310)});
+const poster=new THREE.Mesh(new THREE.PlaneGeometry(5.2,1.83),M(0xffffff,{map:posterTex,roughness:.9}));poster.position.set(2.4,6.6,-4.44);poster.rotation.z=-0.015;scene.add(poster);
+
+// ---- oscilloscope (motion films) ----
+const video=document.createElement('video');video.src=ASSET.ondo;video.muted=true;video.loop=true;video.playsInline=true;video.setAttribute('playsinline','');video.crossOrigin='anonymous';
+const vtex=new THREE.VideoTexture(video);vtex.encoding=THREE.sRGBEncoding;
+const scope=obj('scope',-3.9,TOP,-2.0,0.18);
+box(4.6,2.9,2.6,M(0x2B3330,{roughness:.55}),0,1.45,0,scope);
+box(4.7,.18,2.7,M(0x1A1F1D),0,.09,0,scope);
+const bezel=box(3.0,2.1,.12,M(0x111413,{roughness:.4}),-.62,1.55,1.32,scope);
+const screen=new THREE.Mesh(new THREE.PlaneGeometry(2.72,1.53),new THREE.MeshBasicMaterial({map:vtex,toneMapped:false}));screen.position.set(-.62,1.55,1.39);scope.add(screen);
+const gridTex=tex(512,288,(g,w,h)=>{g.clearRect(0,0,w,h);g.strokeStyle='rgba(124,245,178,.22)';g.lineWidth=1;for(let i=1;i<10;i++){g.beginPath();g.moveTo(i*w/10,0);g.lineTo(i*w/10,h);g.stroke()}for(let j=1;j<8;j++){g.beginPath();g.moveTo(0,j*h/8);g.lineTo(w,j*h/8);g.stroke()}});
+const grid=new THREE.Mesh(new THREE.PlaneGeometry(2.72,1.53),new THREE.MeshBasicMaterial({map:gridTex,transparent:true,toneMapped:false}));grid.position.set(-.62,1.55,1.4);scope.add(grid);
+const knobM=M(0xD8D2C4,{roughness:.35}),redM=M(0xC8402E,{roughness:.4});
+[[1.25,2.3,.22],[1.8,2.3,.17],[1.25,1.75,.17],[1.8,1.75,.22],[1.25,1.2,.15],[1.8,1.2,.15]].forEach(([x,y,r],i)=>{const k=cyl(r,r,.22,i===3?redM:knobM,x,y,1.36,scope);k.rotation.x=Math.PI/2});
+[0.95,1.35,1.75].forEach(x=>{const b=cyl(.11,.11,.14,M(0x0E0F0E),x,.5,1.36,scope);b.rotation.x=Math.PI/2;const r=cyl(.16,.16,.06,M(0xB8B2A4,{metalness:.8,roughness:.3}),x,.5,1.31,scope);r.rotation.x=Math.PI/2});
+const scopeLabel=new THREE.Mesh(new THREE.PlaneGeometry(1.4,.22),new THREE.MeshBasicMaterial({map:tex(512,80,(g,w,h)=>{g.fillStyle='#2B3330';g.fillRect(0,0,w,h);g.fillStyle='#EFE8DA';g.font='600 40px monospace';g.fillText('PG-SCOPE 30',8,56)}),toneMapped:false}));
+scopeLabel.position.set(-1.6,2.8,1.32);scope.add(scopeLabel);
+scope.children.forEach(m=>hit(scope,m));
+const scopeGlow=new THREE.PointLight(0x7CF5B2,.6,7);scopeGlow.position.set(-.6,1.6,2.6);scope.add(scopeGlow);
+// probe cable from scope to breadboard
+function cable(points,color,r=.05){const c=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const m=new THREE.Mesh(new THREE.TubeGeometry(c,64,r,8,false),M(color,{roughness:.45}));m.castShadow=true;scene.add(m);return m}
+cable([[-2.2,TOP+.6,-.75],[-1.6,TOP+.25,.2],[-1.0,TOP+.18,.7],[-.6,TOP+.32,.95]],0x2E5AC2,.06);
+cable([[-2.6,TOP+.6,-.72],[-2.2,TOP+.2,.6],[-1.4,TOP+.15,1.9],[-.7,TOP+.32,1.75]],0xE7E2D6,.06);
+
+// ---- breadboard + chips (apps) ----
+const bbTex=tex(1024,440,(g,w,h)=>{g.fillStyle='#ECE8DF';g.fillRect(0,0,w,h);g.fillStyle='#B9B3A6';
+  for(let row=0;row<2;row++)for(let x=30;x<w-20;x+=16){g.fillRect(x,14+row*14,6,6);g.fillRect(x,h-34+row*14,6,6)}
+  g.fillStyle='#C9402E';g.fillRect(20,8,w-40,2);g.fillStyle='#2E5AC2';g.fillRect(20,h-8,w-40,2);
+  g.fillStyle='#B9B3A6';for(let y=70;y<h-60;y+=16){if(y>205&&y<235)continue;for(let x=30;x<w-20;x+=16)g.fillRect(x,y,6,6)}
+  g.fillStyle='#D6D0C3';g.fillRect(0,212,w,16)});
+const bb=new THREE.Group();bb.position.set(0.9,TOP,1.25);scene.add(bb);
+box(7.4,.3,3.2,M(0xffffff,{map:bbTex,roughness:.7}),0,.15,0,bb);
+const CHIPS=[['c_studylix','STUDYLIX','LIVE'],['c_campus','CAMPUSLOOP','DEMO'],['c_duely','DUELY','LIVE'],['c_taste','TASTELAUNCH','LIVE'],
+             ['c_attend','ATTENDGUARD','LIVE'],['c_rtos','RTSTUDIO','LIVE'],['c_aegis','AEGIS-WAF','BUILT'],['c_pactly','PACTLY','WIP'],['c_volt','VOLTPROOF','WIP'],['c_flow','FLOWDESK','WIP']];
+const pinM=M(0xC9CCD0,{metalness:.9,roughness:.25});
+CHIPS.forEach(([id,name,st],i)=>{
+  const col=i%5,row=Math.floor(i/5);const x=-2.84+col*1.42,z=row?0.62:-0.62;
+  const g=new THREE.Group();g.position.set(bb.position.x+x,TOP+.3,bb.position.z+z);g.userData.id=id;scene.add(g);groups[id]=g;
+  const topTex=tex(512,200,(c,w,h)=>{c.fillStyle='#17181A';c.fillRect(0,0,w,h);c.fillStyle='#2A2C30';c.beginPath();c.arc(30,h/2,14,0,7);c.fill();
+    c.fillStyle='#EFE8DA';c.font=`700 ${name.length>9?40:50}px monospace`;c.fillText(name,60,92);c.fillStyle=st==='WIP'?'#FFB54A':st==='DEMO'?'#D9844A':st==='BUILT'?'#B8C4FF':'#7CF5B2';c.font='500 30px monospace';c.fillText(`PG-0${i+1}  ·  ${st}`,60,150)});
+  const mats=[M(0x17181A),M(0x17181A),new THREE.MeshStandardMaterial({map:topTex,roughness:.5}),M(0x17181A),M(0x17181A),M(0x17181A)];
+  const chip=new THREE.Mesh(new THREE.BoxGeometry(1.24,.26,.56),mats);chip.position.y=.18;chip.castShadow=true;g.add(chip);hit(g,chip);
+  for(let p=0;p<6;p++)for(const s of[-1,1]){const pin=box(.06,.22,.05,pinM,-.5+p*.2,.06,s*.3,g);hit(g,pin)}
+});
+// jumper wires
+cable([[-2.1,TOP+.32,2.6],[-1.8,TOP+.9,2.9],[-1.0,TOP+.32,2.6]],0xC8402E,.035);
+cable([[1.4,TOP+.32,2.6],[2.2,TOP+1.0,3.0],[3.2,TOP+.32,2.6]],0xE0A82E,.035);
+cable([[3.9,TOP+.32,-.05],[4.6,TOP+.8,-.4],[4.6,TOP+.32,-.9]],0x3FA06A,.035);
+
+// ---- FPGA board ----
+const fpga=obj('fpga',4.9,TOP,-1.7,-0.22);
+box(3.8,.12,2.8,M(0x1F5A3C,{roughness:.55}),0,.08,0,fpga);
+const socTex=tex(256,256,(g,w,h)=>{g.fillStyle='#1B1C1E';g.fillRect(0,0,w,h);g.fillStyle='#BFC3C9';g.font='600 26px monospace';g.fillText('ZYNQ',70,110);g.font='500 18px monospace';g.fillText('XC7Z020',62,145);g.beginPath();g.arc(30,30,8,0,7);g.fill()});
+box(1.0,.12,1.0,[M(0x1B1C1E),M(0x1B1C1E),new THREE.MeshStandardMaterial({map:socTex,roughness:.45}),M(0x1B1C1E),M(0x1B1C1E),M(0x1B1C1E)],-.4,.2,-.2,fpga);
+box(.5,.1,.35,M(0x1B1C1E),.75,.18,-.75,fpga);box(.5,.1,.35,M(0x1B1C1E),.75,.18,-.25,fpga);
+for(let i=0;i<10;i++)box(.08,.22,.08,M(0x111111),-1.5+i*.12,.25,-1.2,fpga);
+const leds=[];
+for(let i=0;i<8;i++){const m=new THREE.MeshBasicMaterial({color:0x330a06,toneMapped:false});const l=new THREE.Mesh(new THREE.BoxGeometry(.13,.08,.1),m);l.position.set(-1.2+i*.3,.18,1.05);fpga.add(l);leds.push(m);
+  const sw=box(.1,.14,.2,M(0xD8D2C4),-1.2+i*.3,.22,.72,fpga)}
+const ledLight=new THREE.PointLight(0xFF4A2E,.0,3);ledLight.position.set(0,.6,1.1);fpga.add(ledLight);
+box(.5,.3,.4,M(0xB8B2A4,{metalness:.7,roughness:.3}),1.65,.25,.4,fpga);
+fpga.children.forEach(m=>hit(fpga,m));
+
+// ---- lamp ----
+const lamp=obj('lamp',7.4,TOP,-2.9,-0.5);
+const lampM=M(0xD9844A,{roughness:.35,metalness:.3});
+cyl(.75,.85,.22,M(0x1A1A1A),0,.11,0,lamp);
+const arm1=box(.14,3.6,.14,lampM,0,1.9,0,lamp);arm1.rotation.z=.35;arm1.position.x=-.6;
+const arm2=box(.14,3.0,.14,lampM,-2.2,3.9,0,lamp);arm2.rotation.z=1.25;
+const head=new THREE.Group();head.position.set(-3.6,4.3,0);lamp.add(head);
+const shade=new THREE.Mesh(new THREE.ConeGeometry(.75,1.1,32,1,true),M(0xD9844A,{side:THREE.DoubleSide,roughness:.35,metalness:.3}));shade.rotation.z=-2.4;head.add(shade);
+const bulb=new THREE.Mesh(new THREE.SphereGeometry(.28,16,12),new THREE.MeshBasicMaterial({color:0xFFE2B0,toneMapped:false}));bulb.position.set(-.18,-.2,0);head.add(bulb);
+[arm1,arm2,shade,bulb,...lamp.children].forEach(m=>hit(lamp,m));
+const spot=new THREE.SpotLight(0xFFD9A0,2.4,40,.75,.55,1.2);spot.castShadow=true;spot.shadow.mapSize.set(2048,2048);spot.shadow.bias=-.0004;
+scene.add(spot);spot.position.set(5.1,TOP+4.2,-1.0);spot.target.position.set(-.6,0,.6);scene.add(spot.target);
+const hemi=new THREE.HemisphereLight(0x8FA4B8,0x1A120C,.35);scene.add(hemi);
+const fill=new THREE.DirectionalLight(0x9DB4FF,.25);fill.position.set(-8,9,10);scene.add(fill);
+let lampOn=true;
+function toggleLamp(){lampOn=!lampOn;spot.intensity=lampOn?2.4:0;bulb.material.color.set(lampOn?0xFFE2B0:0x3A332A);hemi.intensity=lampOn?.35:.12;fill.intensity=lampOn?.25:.06;
+  scopeGlow.intensity=lampOn?.6:1.1;ledLight.intensity=lampOn?0:.9}
+
+// ---- notebook (about) ----
+const nb=obj('notebook',-6.3,TOP,1.7,0.28);
+const pageTex=tex(1024,700,(g,w,h)=>{g.fillStyle='#F3EDE0';g.fillRect(0,0,w,h);g.strokeStyle='rgba(60,90,160,.25)';g.lineWidth=2;for(let y=60;y<h;y+=36){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke()}
+  g.strokeStyle='#2A2620';g.lineWidth=5;g.lineCap='round';
+  for(let i=0;i<3;i++){const x=40+i*320,y=70;g.strokeRect(x,y,280,170);g.beginPath();g.arc(x+80+i*60,y+90,30+i*12,0,7);g.stroke();
+    g.beginPath();g.moveTo(x+30,y+150);g.bezierCurveTo(x+100,y+40,x+180,y+170,x+260,y+60);g.stroke();g.font='italic 34px serif';g.fillStyle='#2A2620';g.fillText(['hook','drop','lockup'][i],x+8,y+215)}
+  g.font='600 64px serif';g.fillText('Parin G.',60,440);g.font='italic 40px serif';g.fillText('motion · code · circuits',60,500);
+  g.strokeStyle='#C8402E';g.beginPath();g.moveTo(60,540);g.lineTo(560,540);g.stroke()});
+box(3.0,.18,2.1,M(0x1D2B3F,{roughness:.6}),0,.09,0,nb);
+const pg=new THREE.Mesh(new THREE.PlaneGeometry(2.86,1.96),new THREE.MeshStandardMaterial({map:pageTex,roughness:.85}));pg.rotation.x=-Math.PI/2;pg.position.y=.19;pg.receiveShadow=true;nb.add(pg);
+const pencil=cyl(.05,.05,2.2,M(0xE0A82E),.3,.28,1.25,nb,8);pencil.rotation.z=Math.PI/2;pencil.rotation.y=.2;
+nb.children.forEach(m=>hit(nb,m));
+
+// ---- clipboard (resume) ----
+const cbd=obj('clipboard',-2.9,TOP,2.85,-0.14);
+const resTex=tex(512,700,(g,w,h)=>{g.fillStyle='#FBF8F1';g.fillRect(0,0,w,h);g.fillStyle='#15130F';g.font='800 46px sans-serif';g.fillText('PARIN GUPTA',40,90);g.font='500 20px monospace';g.fillText('MOTION · SOFTWARE · ECE',40,124);
+  g.fillStyle='#C8402E';g.fillRect(40,146,120,5);g.fillStyle='#8A8478';for(let y=190;y<h-40;y+=26){g.fillRect(40,y,(y%78===34?220:320+((y*7)%120)),8)}});
+box(2.1,.08,2.8,M(0x8A5A34,{roughness:.6}),0,.04,0,cbd);
+const paper=new THREE.Mesh(new THREE.PlaneGeometry(1.8,2.45),new THREE.MeshStandardMaterial({map:resTex,roughness:.9}));paper.rotation.x=-Math.PI/2;paper.position.set(0,.09,.12);paper.receiveShadow=true;cbd.add(paper);
+box(.9,.16,.35,M(0xB8B2A4,{metalness:.85,roughness:.25}),0,.14,-1.25,cbd);
+cbd.children.forEach(m=>hit(cbd,m));
+
+// ---- multimeter (skills) ----
+const mm=obj('meter',4.6,TOP,2.4,-0.35);
+box(1.5,.45,2.4,M(0xE0A82E,{roughness:.5}),0,.22,0,mm);
+const lcdTex=tex(256,110,(g,w,h)=>{g.fillStyle='#A9B79A';g.fillRect(0,0,w,h);g.fillStyle='#1A2016';g.font='700 66px monospace';g.fillText('5.00V',14,82)});
+const lcd=new THREE.Mesh(new THREE.PlaneGeometry(1.1,.48),new THREE.MeshBasicMaterial({map:lcdTex,toneMapped:false}));lcd.rotation.x=-Math.PI/2;lcd.position.set(0,.46,-.62);mm.add(lcd);
+const dial=cyl(.42,.42,.12,M(0x1A1A1A),0,.5,.25,mm,32);box(.08,.05,.5,M(0xEFE8DA),0,.58,.25,mm);
+[-.4,.4].forEach((x,i)=>cyl(.1,.1,.1,M(i?0xC8402E:0x111111),x,.48,.95,mm));
+mm.children.forEach(m=>hit(mm,m));
+cable([[4.3,TOP+.5,3.35],[3.6,TOP+.15,3.6],[2.6,TOP+.2,3.0],[2.2,TOP+.35,2.55]],0xC8402E,.045);
+cable([[4.0,TOP+.5,3.3],[3.0,TOP+.15,3.8],[1.6,TOP+.2,3.2],[1.2,TOP+.35,2.6]],0x151515,.045);
+
+// ---- radio (contact) ----
+const radio=obj('radio',7.2,TOP,1.2,-0.55);
+box(2.4,1.4,1.3,M(0x3C3F38,{roughness:.55}),0,.7,0,radio);
+const grill=tex(256,256,(g,w,h)=>{g.fillStyle='#2A2C27';g.fillRect(0,0,w,h);g.fillStyle='#15160F';for(let y=12;y<h;y+=18)for(let x=12;x<w;x+=18){g.beginPath();g.arc(x,y,5,0,7);g.fill()}});
+const gr=new THREE.Mesh(new THREE.PlaneGeometry(1.0,1.0),new THREE.MeshStandardMaterial({map:grill}));gr.position.set(-.55,.72,.66);radio.add(gr);
+const rd=cyl(.32,.32,.12,M(0xD8D2C4),.5,.85,.68,radio);rd.rotation.x=Math.PI/2;
+const ant=cyl(.03,.04,3.2,M(0xBFC3C9,{metalness:.9,roughness:.2}),.9,2.9,-.3,radio,8);ant.rotation.z=-.25;
+const tipM=new THREE.MeshBasicMaterial({color:0xFF4A2E,toneMapped:false});const antTip=new THREE.Mesh(new THREE.SphereGeometry(.09,12,8),tipM);antTip.position.set(1.3,4.45,-.3);radio.add(antTip);
+radio.children.forEach(m=>hit(radio,m));
+
+// ---- decor: mug + solder spool ----
+const mug=cyl(.5,.45,1.0,M(0xEFE8DA,{roughness:.4}),0.9,TOP+.5,-3.4);const handle=new THREE.Mesh(new THREE.TorusGeometry(.28,.07,8,16),M(0xEFE8DA,{roughness:.4}));handle.position.set(1.45,TOP+.55,-3.4);scene.add(handle);
+cyl(.42,.42,.04,M(0x2A160C),0.9,TOP+.95,-3.4);
+// ---- laptop (open source) ----
+const lap=obj('oss',-7.25,TOP,-1.9,0.75);
+box(3.0,.14,2.0,M(0x9AA0A6,{metalness:.7,roughness:.35}),0,.07,0,lap);
+const kb=tex(512,340,(g,w,h)=>{g.fillStyle='#8C9298';g.fillRect(0,0,w,h);g.fillStyle='#2A2D31';for(let r=0;r<5;r++)for(let c=0;c<13;c++)g.fillRect(14+c*37,14+r*40,31,32);g.fillStyle='#7E848A';g.fillRect(150,232,210,90)});
+const kbm=new THREE.Mesh(new THREE.PlaneGeometry(2.8,1.86),new THREE.MeshStandardMaterial({map:kb,roughness:.6}));kbm.rotation.x=-Math.PI/2;kbm.position.y=.145;lap.add(kbm);
+const lid=new THREE.Group();lid.position.set(0,.14,-1.0);lid.rotation.x=-1.85;lap.add(lid);
+box(3.0,.1,2.0,M(0x9AA0A6,{metalness:.7,roughness:.35}),0,0,1.0,lid);
+const termTex=tex(768,512,(g,w,h)=>{g.fillStyle='#0E1110';g.fillRect(0,0,w,h);g.font='500 26px monospace';const L=[['#7CF5B2','$ git remote -v'],['#A49D8E','origin  huggingface/huggingface_hub'],['#7CF5B2','$ gh pr list --author @me'],['#EFE8DA','#5140  top-level export   MERGED'],['#A49D8E','next: MCP client fix'],['#7CF5B2','$ git switch main'],['#EFE8DA','up to date'],['#7CF5B2','$ _']];
+  L.forEach(([c,t],i)=>{g.fillStyle=c;g.fillText(t,28,56+i*52)})});
+const term=new THREE.Mesh(new THREE.PlaneGeometry(2.7,1.75),new THREE.MeshBasicMaterial({map:termTex,toneMapped:false}));term.rotation.x=Math.PI/2;term.position.set(0,-.056,1.0);lid.add(term);
+lap.traverse(m=>{if(m.isMesh)hit(lap,m)});
+cyl(.45,.45,.5,M(0xB87333,{metalness:.8,roughness:.3}),2.6,TOP+.25,-2.9);cyl(.6,.6,.06,M(0x222222),2.6,TOP+.03,-2.9);cyl(.6,.6,.06,M(0x222222),2.6,TOP+.5,-2.9);
+
+// ---------- camera control ----------
+const target=new THREE.Vector3(0,.9,0.2),home={yaw:0,pitch:.62,r:19};
+const cam={yaw:home.yaw,pitch:home.pitch,r:home.r,t:target.clone()};
+const goal={yaw:cam.yaw,pitch:cam.pitch,r:cam.r,t:target.clone()};
+const FOCUS={scope:{t:[-3.9,1.9,-1.6],r:8.5,yaw:.15,pitch:.22},fpga:{t:[4.9,.6,-1.5],r:7,yaw:-.25,pitch:.75},lamp:{t:[4.5,3,-2.5],r:13,yaw:-.2,pitch:.35},
+  notebook:{t:[-6.3,.5,1.7],r:6.5,yaw:.2,pitch:.95},clipboard:{t:[-2.9,.5,2.8],r:6,yaw:0,pitch:1.0},meter:{t:[4.6,.6,2.4],r:6,yaw:-.2,pitch:.85},oss:{t:[-7.4,1.1,-1.8],r:7,yaw:.95,pitch:.4},radio:{t:[7.2,1.4,1.2],r:7.5,yaw:-.45,pitch:.4}};
+function focusOn(id){
+  if(!id){goal.yaw=home.yaw;goal.pitch=home.pitch;goal.r=home.r;goal.t.copy(target);return}
+  let f=FOCUS[id];
+  if(!f&&groups[id]){const p=groups[id].position;f={t:[p.x,p.y+.3,p.z],r:5.5,yaw:0,pitch:.9}}
+  if(!f)return;
+  const narrow=innerWidth<640, side=!narrow;
+  goal.t.set(...f.t);goal.r=f.r*(narrow?1.35:1);goal.yaw=f.yaw;goal.pitch=f.pitch;
+  if(side){ // shift so the object sits left of the sheet
+    const shift=Math.min(520,innerWidth)/innerWidth*f.r*.42;goal.t.x+=Math.cos(goal.yaw)*shift;goal.t.z-=Math.sin(goal.yaw)*shift}
+  else{goal.t.y-=f.r*.18}
+}
+let dragging=false,moved=0,last=null,pinch=null;const pointers=new Map();
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});dragging=true;moved=0;last={x:e.clientX,y:e.clientY};
+  if(pointers.size===2){const [a,b]=[...pointers.values()];pinch=Math.hypot(a.x-b.x,a.y-b.y)}});
+canvas.addEventListener('pointermove',e=>{
+  if(pointers.has(e.pointerId))pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===2&&pinch){const [a,b]=[...pointers.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);goal.r=clampR(goal.r*pinch/d);pinch=d;moved+=10;return}
+  if(dragging&&last){const dx=e.clientX-last.x,dy=e.clientY-last.y;moved+=Math.abs(dx)+Math.abs(dy);
+    goal.yaw=Math.max(-.85,Math.min(.85,goal.yaw-dx*.005));goal.pitch=Math.max(.12,Math.min(1.25,goal.pitch+dy*.004));last={x:e.clientX,y:e.clientY};canvas.classList.toggle('drag',moved>4)}
+  hover(e.clientX,e.clientY)});
+function endPtr(e){pointers.delete(e.pointerId);if(pointers.size<2)pinch=null;
+  if(dragging&&moved<6&&e.type==='pointerup'){const id=pick(e.clientX,e.clientY);if(id)openItem(id);else if(openId)closeSheet()}
+  if(pointers.size===0){dragging=false;canvas.classList.remove('drag')}}
+canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
+canvas.addEventListener('pointerleave',()=>{tip.style.opacity=0;setHot(null)});
+const clampR=r=>Math.max(5,Math.min(26,r));
+canvas.addEventListener('wheel',e=>{e.preventDefault();goal.r=clampR(goal.r*(1+Math.sign(e.deltaY)*.08))},{passive:false});
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+function pick(x,y){const r=canvas.getBoundingClientRect();ndc.set((x-r.left)/r.width*2-1,-((y-r.top)/r.height)*2+1);ray.setFromCamera(ndc,camera);const h=ray.intersectObjects(clickables,false)[0];return h?h.object.userData.id:null}
+const tip=document.getElementById('tip');let hotId=null;
+function setHot(id){if(hotId===id)return;hotId=id;canvas.classList.toggle('hot',!!id)}
+function hover(x,y){if(dragging&&moved>4){tip.style.opacity=0;return}const id=pick(x,y);setHot(id);
+  if(id){tip.textContent=(found.has(id)?'✓ ':'')+(ITEMS[id].group==='Hidden'&&!found.has(id)?'Hmm?':ITEMS[id].label);tip.style.left=x+'px';tip.style.top=y+'px';tip.style.opacity=1}else tip.style.opacity=0}
+// keyboard: arrows orbit, +/- zoom
+canvas.addEventListener('keydown',e=>{const k=e.key;if(k==='ArrowLeft')goal.yaw=Math.max(-.85,goal.yaw+.1);if(k==='ArrowRight')goal.yaw=Math.min(.85,goal.yaw-.1);
+  if(k==='ArrowUp')goal.pitch=Math.min(1.25,goal.pitch+.08);if(k==='ArrowDown')goal.pitch=Math.max(.12,goal.pitch-.08);if(k==='+'||k==='=')goal.r=clampR(goal.r*.92);if(k==='-')goal.r=clampR(goal.r*1.08)});
+
+// hints: pulse what hasn't been found
+let hintUntil=0;document.getElementById('hintBtn').onclick=()=>{hintUntil=performance.now()+3500;const left=ORDER.filter(id=>!found.has(id)).length;
+  document.getElementById('hintLine').textContent=left?`${left} left. The glowing things are the ones you haven't opened yet.`:'You found everything.';};
+const glowMats=new Map();
+Object.entries(groups).forEach(([id,g])=>{const mats=[];g.traverse(o=>{if(o.isMesh){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(m.isMeshStandardMaterial&&!mats.includes(m))mats.push(m)})}});glowMats.set(id,mats)});
+// materials are shared across objects (knobs etc.), so clone per group to glow independently
+glowMats.forEach((mats,id)=>{const map=new Map();groups[id].traverse(o=>{if(!o.isMesh)return;const arr=Array.isArray(o.material)?o.material:[o.material];
+  const out=arr.map(m=>{if(!m.isMeshStandardMaterial)return m;if(!map.has(m))map.set(m,m.clone());return map.get(m)});o.material=Array.isArray(o.material)?out:out[0]});glowMats.set(id,[...map.values()])});
+
+// ---------- loop ----------
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;
+  camera.fov=w<640?50:38;home.r=w<640?31:(w/h<1.2?24:19);camera.updateProjectionMatrix()}
+addEventListener('resize',()=>{resize();if(!openId){goal.r=home.r}});resize();cam.r=goal.r=home.r;
+const clock=new THREE.Clock();let frame=0;
+function loop(){
+  const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime,k=1-Math.pow(.0015,dt);
+  cam.yaw+=(goal.yaw-cam.yaw)*k;cam.pitch+=(goal.pitch-cam.pitch)*k;cam.r+=(goal.r-cam.r)*k;cam.t.lerp(goal.t,k);
+  const idle=reduce||dragging||openId?0:Math.sin(t*.25)*.03;
+  const y=cam.yaw+idle;camera.position.set(cam.t.x+cam.r*Math.sin(y)*Math.cos(cam.pitch),cam.t.y+cam.r*Math.sin(cam.pitch),cam.t.z+cam.r*Math.cos(y)*Math.cos(cam.pitch));camera.lookAt(cam.t);
+  // FPGA binary counter
+  const n=Math.floor(t*(reduce?1:4))%256;leds.forEach((m,i)=>m.color.set((n>>(7-i))&1?0xFF4A2E:0x330a06));
+  tipM.color.set(Math.sin(t*3)>.6?0xFF4A2E:0x400c06);
+  if(!reduce)dial.rotation.y=Math.sin(t*.7)*.6;
+  // glow: hover + hints
+  const hinting=performance.now()<hintUntil;
+  glowMats.forEach((mats,id)=>{let e=0;if(id===hotId)e=.35;else if(hinting&&!found.has(id))e=.25+.25*Math.sin(t*6);
+    mats.forEach(m=>{m.emissive.setRGB(e,e*.75,e*.4)})});
+  renderer.render(scene,camera);
+  if(++frame===2)document.getElementById('boot').classList.add('gone');
+  requestAnimationFrame(loop);
+}
+const vp=video.play();if(vp&&vp.catch)vp.catch(()=>{});
+document.addEventListener('pointerdown',()=>{if(video.paused){const p=video.play();if(p&&p.catch)p.catch(()=>{})}},{once:true});
+requestAnimationFrame(loop);
+window.__bench={openItem,closeSheet,focusOn,toggleLamp};
+})();
+</script>
+
+</body></html>
