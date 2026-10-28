@@ -519,6 +519,8 @@ function loop(){
 const vp=video.play();if(vp&&vp.catch)vp.catch(()=>{});
 document.addEventListener('pointerdown',()=>{if(video.paused){const p=video.play();if(p&&p.catch)p.catch(()=>{})}},{once:true});
 requestAnimationFrame(loop);
+function fromHash(){const h=(location.hash||'').slice(1);const map={films:'scope',motion:'scope',resume:'clipboard',about:'notebook',contact:'radio'};const id=map[h]||h;if(ITEMS[id])setTimeout(()=>openItem(id),400)}
+fromHash();addEventListener('hashchange',fromHash);
 window.__bench={openItem,closeSheet,focusOn,toggleLamp};
 })();
 </script>
