@@ -141,7 +141,7 @@ h1{margin:0;font-family:var(--display);font-weight:800;font-stretch:72%;font-siz
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function(){
-const ASSET={resume:"assets/Parin_Gupta_Resume.pdf",ondo:"assets/ondo.mp4",ondoPoster:"assets/ondo-poster.jpg",tl:"assets/tastelaunch.mp4",tlPoster:"assets/tastelaunch-poster.jpg",du:"assets/duely.mp4",duPoster:"assets/duely-poster.jpg"};
+const ASSET={fold:"assets/fold.mp4",foldPoster:"assets/fold-poster.jpg",resume:"assets/Parin_Gupta_Resume.pdf",ondo:"assets/ondo.mp4",ondoPoster:"assets/ondo-poster.jpg",tl:"assets/tastelaunch.mp4",tlPoster:"assets/tastelaunch-poster.jpg",du:"assets/duely.mp4",duPoster:"assets/duely-poster.jpg"};
 const EMAIL="paringupta17@gmail.com";
 
 // ---------- content ----------
@@ -155,8 +155,9 @@ function app(o){return{kind:o.kind||'App · on the breadboard',group:'Apps',titl
 const ITEMS={
  scope:{kind:'Motion · the oscilloscope',group:'Motion',title:'Motion films',label:'Motion films',html:`
   <h2 id="sheetTitle">Motion films</h2>
-  <p>Launch films for products, timed to music and built around one idea each. The scope on the bench is playing the first one.</p>
+  <p>Launch films for products, 2D and 3D, timed to music and built around one idea each. The scope on the bench is playing the first one.</p>
   <div class="film"><video src="${ASSET.ondo}" poster="${ASSET.ondoPoster}" controls playsinline preload="none"></video><h3>ondo</h3><span class="mono">Concept product film · 0:30 · 1080p60 · 120 BPM</span><p>A launch film for ondo, a fictional music app. One coral disc carries every transition: logo, play button, mood picker, the drop, a shared session, an EQ handle, and finally the "o" in the wordmark.</p></div>
+  <div class="film"><video src="${ASSET.fold}" poster="${ASSET.foldPoster}" controls playsinline preload="none"></video><h3>FOLD</h3><span class="mono">Launch film · 0:32 · 3D · Meta Start Developer Competition 2026</span><p>A lit, story-driven 3D film for my origami VR game. A sheet is folded by hand into a fox, a boat, a lantern and a plane, each comes alive in its own little world, and the film ends on six chapters under a sky of paper lanterns.</p></div>
   <div class="film"><video src="${ASSET.tl}" poster="${ASSET.tlPoster}" controls playsinline preload="none"></video><h3>TasteLaunch</h3><span class="mono">Launch film · 0:24 · Qloo hackathon 2026</span><p>From one typed idea to a named café with its own palette and storefront, then a side-by-side showing how much better the picks get with Qloo's taste data.</p></div>
   <div class="film"><video src="${ASSET.du}" poster="${ASSET.duPoster}" controls playsinline preload="none"></video><h3>Duely</h3><span class="mono">Promo film · 0:30 · Galuxium Nexus V2 2026</span><p>Opens on the late-payment problem and follows one invoice from drafting through friendly, firm and final reminders to a one-link payment.</p></div>`},
  c_studylix:app({title:'Studylix',status:'Live · testing',text:'A study operating system that puts timetable, tasks, exams, a focus timer and notes in one place, with each subject linking everything together. It has two-way Google Calendar sync, background jobs, file storage, and separate dev and prod databases.',stack:['Next.js','TypeScript','PostgreSQL','Inngest','Google OAuth','Backblaze B2'],links:[['https://studylix.vercel.app','Open Studylix']]}),
@@ -195,6 +196,13 @@ c_aegis:app({title:'Aegis',status:'Built',text:'A Layer 7 web application firewa
   ${facts([['Now','Open source contributor, huggingface_hub · Oct 2026 – present'],['Before','Hardware Engineering Intern, BITS Pilani 5G Systems Lab · Jun – Jul 2026'],['Built','Duely, Pactly, Studylix, RTStudio, CampusLoop, Aegis'],['Studying','B.E. Computer Engineering, Thapar Institute · 2025 – 2029']])}
   <div class="links" id="resumeLinks"><button class="btn" id="dlResume" type="button">Download resume (PDF)</button>${link(ASSET.resume,'Open in a new tab',true)}</div>
   <p id="resumeMsg" class="mono" style="color:var(--dim);font-size:13px"></p>`},
+ c_fold:{kind:'Game · the paper fox',group:'Apps',title:'FOLD',label:'FOLD (VR game)',html:`
+  <h2 id="sheetTitle">FOLD</h2>${status('Live · competition entry')}
+  <p>A hands-first origami game for Meta Quest. You fold real-feeling paper with your own hands, and every model you finish comes alive in its own little paper world. Six chapters, and a new sheet every day.</p>
+  <div class="film"><video src="${ASSET.fold}" poster="${ASSET.foldPoster}" controls playsinline preload="none"></video><span class="mono">Launch film · 0:32 · made by me</span></div>
+  ${tags(['WebXR','Meta Immersive Web SDK','Hand tracking','Three.js','Vercel'])}
+  ${facts([['Event','Meta Start Developer Competition 2026 · Gaming track · solo'],['Platform','Meta Quest, in the browser through WebXR']])}
+  <div class="links">${link('https://fold-blond.vercel.app','Open FOLD')}${link('https://github.com/guptaparin/FOLD','Code',true)}</div>`},
  oss:{kind:'Open source · the laptop',group:'Experience',title:'Hugging Face',label:'Open source',html:`
   <h2 id="sheetTitle">Open source at Hugging Face</h2>${status('Oct 2026 – present')}
   <p>I contribute bug fixes and API improvements to huggingface_hub, Hugging Face's official Python client for models, datasets and Spaces on the Hub.</p>
@@ -208,7 +216,7 @@ c_aegis:app({title:'Aegis',status:'Built',text:'A Layer 7 web application firewa
  lamp:{kind:'Easter egg · the lamp',group:'Hidden',title:'Lights',label:'The lamp',html:`
   <h2 id="sheetTitle">Lights out.</h2><p>You found the switch. Tap the lamp again to bring the light back. Everything that glows on its own keeps glowing.</p>`},
 };
-const ORDER=['scope','c_studylix','c_campus','c_duely','c_taste','c_attend','c_pactly','c_volt','c_flow','c_rtos','c_aegis','oss','fpga','notebook','meter','clipboard','radio','lamp'];
+const ORDER=['scope','c_studylix','c_campus','c_duely','c_taste','c_attend','c_pactly','c_volt','c_flow','c_rtos','c_aegis','c_fold','oss','fpga','notebook','meter','clipboard','radio','lamp'];
 
 // ---------- found state ----------
 let found=new Set();
@@ -426,6 +434,26 @@ const ant=cyl(.03,.04,3.2,M(0xBFC3C9,{metalness:.9,roughness:.2}),.9,2.9,-.3,rad
 const tipM=new THREE.MeshBasicMaterial({color:0xFF4A2E,toneMapped:false});const antTip=new THREE.Mesh(new THREE.SphereGeometry(.09,12,8),tipM);antTip.position.set(1.3,4.45,-.3);radio.add(antTip);
 radio.children.forEach(m=>hit(radio,m));
 
+// ---- origami fox (FOLD) ----
+const foxG=obj('c_fold',6.15,TOP,3.35,-0.6);
+const foxM=n=>new THREE.MeshStandardMaterial({color:n,roughness:.75,metalness:0,flatShading:true,side:THREE.DoubleSide});
+function tri(a,b,c,col){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute([...a,...b,...c],3));g.computeVertexNormals();
+  const m=new THREE.Mesh(g,foxM(col));m.castShadow=true;m.receiveShadow=true;foxG.add(m);hit(foxG,m);return m}
+// body: a folded tent
+tri([-.75,0,-.35],[.75,0,-.35],[0,.95,0],0xE8551A);tri([-.75,0,.35],[0,.95,0],[.75,0,.35],0xF26A22);
+tri([-.75,0,-.35],[0,.95,0],[-.75,0,.35],0xC4440F);tri([.75,0,-.35],[.75,0,.35],[0,.95,0],0xD64C14);
+// head with ears, standing on the front of the body
+const H=[0,1.0,.42];
+tri([-.62,1.55,.3],[.62,1.55,.3],[0,.72,.55],0xF7843A);
+tri([-.62,1.55,.3],[-.42,2.05,.2],[-.18,1.55,.34],0xE8551A);
+tri([.18,1.55,.34],[.42,2.05,.2],[.62,1.55,.3],0xE8551A);
+tri([-.62,1.55,.3],[0,.72,.55],[-.2,1.3,.05],0xC4440F);tri([.62,1.55,.3],[.2,1.3,.05],[0,.72,.55],0xD64C14);
+// tail
+tri([.7,.05,0],[1.45,.75,-.15],[.95,.1,.25],0xF26A22);tri([1.45,.75,-.15],[1.25,.95,-.1],[1.2,.6,.15],0xFFF3E3);
+// paper square under it
+const sq=new THREE.Mesh(new THREE.PlaneGeometry(1.9,1.9),new THREE.MeshStandardMaterial({color:0xF2E6D2,roughness:.9}));sq.rotation.x=-Math.PI/2;sq.rotation.z=.3;sq.position.y=.012;sq.receiveShadow=true;foxG.add(sq);hit(foxG,sq);
+foxG.scale.setScalar(.82);
+
 // ---- decor: mug + solder spool ----
 const mug=cyl(.5,.45,1.0,M(0xEFE8DA,{roughness:.4}),0.9,TOP+.5,-3.4);const handle=new THREE.Mesh(new THREE.TorusGeometry(.28,.07,8,16),M(0xEFE8DA,{roughness:.4}));handle.position.set(1.45,TOP+.55,-3.4);scene.add(handle);
 cyl(.42,.42,.04,M(0x2A160C),0.9,TOP+.95,-3.4);
@@ -447,7 +475,7 @@ const target=new THREE.Vector3(0,.9,0.2),home={yaw:0,pitch:.62,r:19};
 const cam={yaw:home.yaw,pitch:home.pitch,r:home.r,t:target.clone()};
 const goal={yaw:cam.yaw,pitch:cam.pitch,r:cam.r,t:target.clone()};
 const FOCUS={scope:{t:[-3.9,1.9,-1.6],r:8.5,yaw:.15,pitch:.22},fpga:{t:[4.9,.6,-1.5],r:7,yaw:-.25,pitch:.75},lamp:{t:[4.5,3,-2.5],r:13,yaw:-.2,pitch:.35},
-  notebook:{t:[-6.3,.5,1.7],r:6.5,yaw:.2,pitch:.95},clipboard:{t:[-2.9,.5,2.8],r:6,yaw:0,pitch:1.0},meter:{t:[4.6,.6,2.4],r:6,yaw:-.2,pitch:.85},oss:{t:[-7.4,1.1,-1.8],r:7,yaw:.95,pitch:.4},radio:{t:[7.2,1.4,1.2],r:7.5,yaw:-.45,pitch:.4}};
+  notebook:{t:[-6.3,.5,1.7],r:6.5,yaw:.2,pitch:.95},clipboard:{t:[-2.9,.5,2.8],r:6,yaw:0,pitch:1.0},meter:{t:[4.6,.6,2.4],r:6,yaw:-.2,pitch:.85},c_fold:{t:[6.8,.8,3.1],r:6.5,yaw:.55,pitch:.62},oss:{t:[-7.4,1.1,-1.8],r:7,yaw:.95,pitch:.4},radio:{t:[7.2,1.4,1.2],r:7.5,yaw:-.45,pitch:.4}};
 function focusOn(id){
   if(!id){goal.yaw=home.yaw;goal.pitch=home.pitch;goal.r=home.r;goal.t.copy(target);return}
   let f=FOCUS[id];
@@ -507,7 +535,7 @@ function loop(){
   // FPGA binary counter
   const n=Math.floor(t*(reduce?1:4))%256;leds.forEach((m,i)=>m.color.set((n>>(7-i))&1?0xFF4A2E:0x330a06));
   tipM.color.set(Math.sin(t*3)>.6?0xFF4A2E:0x400c06);
-  if(!reduce)dial.rotation.y=Math.sin(t*.7)*.6;
+  if(!reduce){dial.rotation.y=Math.sin(t*.7)*.6;foxG.rotation.y=-0.6+Math.sin(t*.9)*.08}
   // glow: hover + hints
   const hinting=performance.now()<hintUntil;
   glowMats.forEach((mats,id)=>{let e=0;if(id===hotId)e=.35;else if(hinting&&!found.has(id))e=.25+.25*Math.sin(t*6);
